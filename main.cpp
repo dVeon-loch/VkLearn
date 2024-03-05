@@ -34,19 +34,16 @@ int main()
 
 	auto test = matrix * vec;
 
-	int main() {
-		VkRenderer renderer;
+	VkRenderer renderer;
 
-		try {
-			renderer.run();
-		}
-		catch (const std::exception& e) {
-			std::cerr << e.what() << std::endl;
-			return EXIT_FAILURE;
-		}
-
-		return EXIT_SUCCESS;
+	try {
+		renderer.run();
+	}
+	catch (const std::exception& e) {
+		std::cerr << e.what() << std::endl;
+		return EXIT_FAILURE;
 	}
 
-	return 0;
+	return EXIT_SUCCESS;
+
 }
