@@ -7,9 +7,13 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <iostream>
 
 #include "VkRenderer.h"
+#include <vulkan/vulkan.h>
+
+#include <iostream>
+#include <stdexcept>
+#include <cstdlib>
 
 int main()
 {
@@ -30,24 +34,19 @@ int main()
 
 	auto test = matrix * vec;
 
-	VkRenderer renderer;
+	int main() {
+		VkRenderer renderer;
 
-	renderer.InitVulkan();
+		try {
+			renderer.run();
+		}
+		catch (const std::exception& e) {
+			std::cerr << e.what() << std::endl;
+			return EXIT_FAILURE;
+		}
 
-	/// - MAIN LOOP
-
-	while (!glfwWindowShouldClose(window))
-	{
-		glfwPollEvents();
+		return EXIT_SUCCESS;
 	}
-
-	/// ~END MAIN LOOP
-
-	/// CLEANUP
-	renderer.Cleanup();
-
-	glfwDestroyWindow(window);
-	glfwTerminate();
 
 	return 0;
 }
