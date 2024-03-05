@@ -23,6 +23,9 @@ public:
     void run() {
         InitWindow();
         InitVulkan();
+#ifdef _DEBUG
+        PrintDebugInfo();
+#endif
         MainLoop();
         Cleanup();
     }
@@ -37,6 +40,9 @@ public:
 
 private:
     void CreateInstance();
+
+    void PrintDebugInfo();
+
     std::vector <std::string> GetRequiredExtensions();
 
     static void VK_CHECK_RESULT(VkResult result, std::string action)

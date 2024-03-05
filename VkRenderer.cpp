@@ -67,6 +67,23 @@ void VkRenderer::CreateInstance()
 
 	VK_CHECK_RESULT(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance), "create instance");
 }
+
+void VkRenderer::PrintDebugInfo()
+{
+	uint32_t extensionCount = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> extensions(extensionCount);
+
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+
+	std::cout << "Available extensions: " << "\n";
+	for(const auto& extension : extensions)
+	{
+		std::cout << extension.extensionName << ", Version: " << extension.specVersion << "\n";
+	}
+}
+
 std::vector<std::string> VkRenderer::GetRequiredExtensions()
 {
 	std::vector<std::string> requiredExtensions;
