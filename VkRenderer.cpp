@@ -73,6 +73,8 @@ void VkRenderer::PrintDebugInfo()
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
+	std::cout << extensionCount << " extensions supported." << "\n";
+
 	std::vector<VkExtensionProperties> extensions(extensionCount);
 
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
