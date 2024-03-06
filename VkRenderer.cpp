@@ -2,6 +2,8 @@
 
 #include<cstring>
 #include<iostream>
+#include<iomanip>
+#include<format>
 
 void VkRenderer::InitWindow()
 {
@@ -82,7 +84,7 @@ void VkRenderer::PrintDebugInfo()
 	std::cout << "Available extensions: " << "\n";
 	for(const auto& extension : extensions)
 	{
-		std::cout << extension.extensionName << ", Version: " << extension.specVersion << "\n";
+		std::cout << std::format("\t{:45} Version: {}", extension.extensionName, extension.specVersion) << '\n';
 	}
 }
 
