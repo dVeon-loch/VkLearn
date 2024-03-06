@@ -70,7 +70,7 @@ void VkRenderer::CreateInstance()
 	VK_CHECK_RESULT(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance), "create instance");
 }
 
-void VkRenderer::PrintDebugInfo()
+void VkRenderer::PrintDebugInfo() const
 {
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -88,7 +88,7 @@ void VkRenderer::PrintDebugInfo()
 	}
 }
 
-std::vector<std::string> VkRenderer::GetRequiredExtensions()
+std::vector<std::string> VkRenderer::GetRequiredExtensions() const
 {
 	std::vector<std::string> requiredExtensions;
 

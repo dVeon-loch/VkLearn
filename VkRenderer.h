@@ -41,9 +41,9 @@ public:
 private:
     void CreateInstance();
 
-    void PrintDebugInfo();
+    void PrintDebugInfo() const;
 
-    std::vector <std::string> GetRequiredExtensions();
+    std::vector <std::string> GetRequiredExtensions() const;
 
     static void VK_CHECK_RESULT(VkResult result, std::string action)
     {
