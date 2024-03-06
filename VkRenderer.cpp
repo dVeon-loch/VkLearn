@@ -13,7 +13,7 @@ void VkRenderer::InitWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// Don't worry about resizing the window for now, just disable it
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
+	// Store a handle to our window in our class
 	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr);
 }
 
@@ -24,8 +24,8 @@ void VkRenderer::InitVulkan()
 
 void VkRenderer::Cleanup()
 {
+	/// GLFW Cleanup
 	glfwDestroyWindow(_window);
-
 	glfwTerminate();
 }
 
@@ -104,6 +104,8 @@ std::vector<std::string> VkRenderer::GetRequiredExtensions() const
 		const std::string extension(glfwExtensions[i]);
 		requiredExtensions.push_back(extension);
 	}
+
+	/// ADD MORE EXTENSIONS HERE AS NEEDED
 
 	return requiredExtensions;
 }
