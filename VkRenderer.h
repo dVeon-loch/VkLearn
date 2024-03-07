@@ -5,8 +5,23 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
+#include <optional>
 
 #include <vulkan/vk_enum_string_helper.h>
+
+VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData);
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+
+    bool AllFamiliesAvailable() {
+        return graphicsFamily.has_value();
+    }
+};
 
 class VkRenderer
 {
@@ -15,18 +30,33 @@ private:
 
     static constexpr uint32_t HEIGHT = 600;
 
+    const std::vector<std::string> _validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+    };
+
+#ifdef NDEBUG
+    static constexpr bool _enableValidationLayers = false;
+#else
+    static constexpr bool _enableValidationLayers = true;
+#endif
+
     GLFWwindow* _window;
 
     VkInstance _instance;
+    VkDebugUtilsMessengerEXT _debugMessenger;
+
+    VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+    VkDevice _device = VK_NULL_HANDLE;
+    VkQueue _graphicsQueue;
 
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
     void run() {
         InitWindow();
-        InitVulkan();
 #ifdef _DEBUG
         PrintDebugInfo();
 #endif
+        InitVulkan();
         MainLoop();
         Cleanup();
     }
@@ -36,6 +66,11 @@ private:
     
     /// @brief Initialises all Vulkan resources, structures etc. that are required to start rendering
 	void InitVulkan();
+
+    /// 
+    void PickPhysicalDevice();
+
+    void CreateLogicalDevice();
 
     /// @brief Cleans up all resources that need to be manually managed
 	void Cleanup();
@@ -48,6 +83,10 @@ private:
     
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;
+
+    std::optional<std::string> CheckValidationLayerSupport();
+
+    void SetupDebugMessenger();
 
     /// @brief Gets all extensions required by this renderer
     /// @return Vector of strings containing the names of the extensions
@@ -66,5 +105,7 @@ private:
         }
 #endif
     }
+
+   
 };
 
