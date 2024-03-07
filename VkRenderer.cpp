@@ -2,6 +2,8 @@
 
 #include<cstring>
 #include<iostream>
+#include<iomanip>
+#include<format>
 
 void VkRenderer::InitWindow()
 {
@@ -11,7 +13,7 @@ void VkRenderer::InitWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// Don't worry about resizing the window for now, just disable it
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
+	// Store a handle to our window in our class
 	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr);
 }
 
@@ -22,8 +24,8 @@ void VkRenderer::InitVulkan()
 
 void VkRenderer::Cleanup()
 {
+	/// GLFW Cleanup
 	glfwDestroyWindow(_window);
-
 	glfwTerminate();
 }
 
@@ -68,7 +70,7 @@ void VkRenderer::CreateInstance()
 	VK_CHECK_RESULT(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance), "create instance");
 }
 
-void VkRenderer::PrintDebugInfo()
+void VkRenderer::PrintDebugInfo() const
 {
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -82,11 +84,11 @@ void VkRenderer::PrintDebugInfo()
 	std::cout << "Available extensions: " << "\n";
 	for(const auto& extension : extensions)
 	{
-		std::cout << extension.extensionName << ", Version: " << extension.specVersion << "\n";
+		std::cout << std::format("\t{:45} Version: {}", extension.extensionName, extension.specVersion) << '\n';
 	}
 }
 
-std::vector<std::string> VkRenderer::GetRequiredExtensions()
+std::vector<std::string> VkRenderer::GetRequiredExtensions() const
 {
 	std::vector<std::string> requiredExtensions;
 
@@ -102,6 +104,8 @@ std::vector<std::string> VkRenderer::GetRequiredExtensions()
 		const std::string extension(glfwExtensions[i]);
 		requiredExtensions.push_back(extension);
 	}
+
+	/// ADD MORE EXTENSIONS HERE AS NEEDED
 
 	return requiredExtensions;
 }
