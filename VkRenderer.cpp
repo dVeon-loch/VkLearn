@@ -148,6 +148,11 @@ void VkRenderer::CreateLogicalDevice()
 	vkGetDeviceQueue(_device, indices.graphicsFamily.value(), 0, &_graphicsQueue);
 }
 
+void VkRenderer::CreateSurface()
+{
+	VK_CHECK_RESULT(glfwCreateWindowSurface(_instance, _window, nullptr, &_surface), "create window surface");
+}
+
 void VkRenderer::Cleanup()
 {
 	vkDestroyDevice(_device, nullptr);
@@ -155,6 +160,8 @@ void VkRenderer::Cleanup()
 	if (_enableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
 	}
+
+	vkDestroySurfaceKHR(_instance, _surface, nullptr);
 
 	vkDestroyInstance(_instance, nullptr);
 

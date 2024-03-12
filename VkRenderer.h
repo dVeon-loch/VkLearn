@@ -49,6 +49,8 @@ private:
     VkDevice _device = VK_NULL_HANDLE;
     VkQueue _graphicsQueue;
 
+    VkSurfaceKHR _surface;
+
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
     void run() {
@@ -56,6 +58,7 @@ public:
 #ifdef _DEBUG
         PrintDebugInfo();
 #endif
+        CreateSurface();
         InitVulkan();
         MainLoop();
         Cleanup();
@@ -71,6 +74,8 @@ private:
     void PickPhysicalDevice();
 
     void CreateLogicalDevice();
+
+    void CreateSurface();
 
     /// @brief Cleans up all resources that need to be manually managed
 	void Cleanup();
