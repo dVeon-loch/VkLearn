@@ -4,6 +4,7 @@
 #include<iostream>
 #include<iomanip>
 #include<format>
+#include<set>
 
 #include "VkUtils.h"
 
@@ -40,15 +41,25 @@ void VkRenderer::InitVulkan()
 {
 	CreateInstance();
 	SetupDebugMessenger();
+	CreateSurface();
 	PickPhysicalDevice();
 	CreateLogicalDevice();
 }
 
+bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
+{
+	VkPhysicalDeviceProperties deviceProperties;
+	vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
+	QueueFamilyIndices indices = FindQueueFamilies(device);
 
-static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) {
+	// Pick your dedicated GPU
+	return indices.AllFamiliesAvailable() && deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+}
+
+QueueFamilyIndices VkRenderer::FindQueueFamilies(VkPhysicalDevice device) {
 	QueueFamilyIndices indices;
-	
+
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -60,6 +71,14 @@ static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) {
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
 		}
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _surface, &presentSupport);
+		// NOTE: These will probably be the same queue, but if you want to guarantee that, you can add
+		// logic in during physical device selection and here to ensure that
+		if (presentSupport)
+		{
+			indices.presentFamily = i;
+		}
 		if (indices.AllFamiliesAvailable()) {
 			break;
 		}
@@ -67,17 +86,6 @@ static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device) {
 	}
 
 	return indices;
-}
-
-static bool IsDeviceSuitable(VkPhysicalDevice device)
-{
-	VkPhysicalDeviceProperties deviceProperties;
-	vkGetPhysicalDeviceProperties(device, &deviceProperties);
-
-	QueueFamilyIndices indices = FindQueueFamilies(device);
-
-	// Pick your dedicated GPU
-	return indices.AllFamiliesAvailable() && deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 }
 
 void VkRenderer::PickPhysicalDevice()
@@ -114,21 +122,27 @@ void VkRenderer::CreateLogicalDevice()
 {
 	QueueFamilyIndices indices = FindQueueFamilies(_physicalDevice);
 
-	VkDeviceQueueCreateInfo queueCreateInfo{};
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-	queueCreateInfo.queueCount = 1;
-	float queuePriority = 1.0f;
-	queueCreateInfo.pQueuePriorities = &queuePriority;
+	// set ensures that we only have one queue family index if the queues are actually the same
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	queueCreateInfos.reserve(uniqueQueueFamilies.size());
 
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfoArray = { queueCreateInfo };
+	float queuePriority = 1.0f;
+	for (uint32_t queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pQueueCreateInfos = queueCreateInfoArray.data();
-	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfoArray.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
 	createInfo.enabledExtensionCount = 0;
@@ -144,8 +158,10 @@ void VkRenderer::CreateLogicalDevice()
 
 	// Get handles to queues we need
 	//Device queues are implicitly cleaned up when the device is destroyed, so we don't need to do anything in cleanup.
-	// Queue index is zero here, further queues we need will increment this value
+	// Queue index must be less than the number of queues you reserved using the queueCount number above in
+	// VkDeviceQueueCreateInfo
 	vkGetDeviceQueue(_device, indices.graphicsFamily.value(), 0, &_graphicsQueue);
+	vkGetDeviceQueue(_device, indices.presentFamily.value(), 0, &_presentQueue);
 }
 
 void VkRenderer::CreateSurface()

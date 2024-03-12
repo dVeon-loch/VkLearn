@@ -17,9 +17,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
 
     bool AllFamiliesAvailable() {
-        return graphicsFamily.has_value();
+        return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
 
@@ -48,6 +49,7 @@ private:
     VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
     VkDevice _device = VK_NULL_HANDLE;
     VkQueue _graphicsQueue;
+    VkQueue _presentQueue;
 
     VkSurfaceKHR _surface;
 
@@ -58,7 +60,6 @@ public:
 #ifdef _DEBUG
         PrintDebugInfo();
 #endif
-        CreateSurface();
         InitVulkan();
         MainLoop();
         Cleanup();
@@ -93,6 +94,10 @@ private:
 
     void SetupDebugMessenger();
 
+    QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+
+    bool IsDeviceSuitable(VkPhysicalDevice device);
+
     /// @brief Gets all extensions required by this renderer
     /// @return Vector of strings containing the names of the extensions
     std::vector <std::string> GetRequiredExtensions() const;
@@ -113,4 +118,5 @@ private:
 
    
 };
+
 
