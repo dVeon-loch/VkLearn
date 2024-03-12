@@ -53,8 +53,27 @@ bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
 
 	QueueFamilyIndices indices = FindQueueFamilies(device);
 
+	const bool extensionsSupported = CheckDeviceExtensionSupport(device);
+
 	// Pick your dedicated GPU
-	return indices.AllFamiliesAvailable() && deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+	return indices.AllFamiliesAvailable() && extensionsSupported && deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+}
+
+bool VkRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
+{
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(_deviceExtensions.begin(), _deviceExtensions.end());
+
+	for (const auto& extension : availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
 }
 
 QueueFamilyIndices VkRenderer::FindQueueFamilies(VkPhysicalDevice device) {

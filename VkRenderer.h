@@ -34,6 +34,10 @@ private:
     const std::vector<std::string> _validationLayers = {
     "VK_LAYER_KHRONOS_validation"
     };
+    
+    const std::vector<std::string> _deviceExtensions = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
 
 #ifdef NDEBUG
     static constexpr bool _enableValidationLayers = false;
@@ -97,6 +101,8 @@ private:
     QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
 
     bool IsDeviceSuitable(VkPhysicalDevice device);
+
+    bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 
     /// @brief Gets all extensions required by this renderer
     /// @return Vector of strings containing the names of the extensions
