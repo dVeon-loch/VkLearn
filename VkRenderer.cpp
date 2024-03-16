@@ -227,7 +227,7 @@ void VkRenderer::CreateInstance()
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "No Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_0; // TODO: Update version
+	appInfo.apiVersion = VK_API_VERSION_1_3; // TODO: Update version
 
 	// Mandatory info to create the instance
 	VkInstanceCreateInfo instanceCreateInfo{};
