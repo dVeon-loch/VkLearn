@@ -24,6 +24,14 @@ struct QueueFamilyIndices {
     }
 };
 
+struct SwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+};
+
+
 class VkRenderer
 {
 private:
@@ -35,7 +43,7 @@ private:
     "VK_LAYER_KHRONOS_validation"
     };
     
-    const std::vector<std::string> _deviceExtensions = {
+    const std::vector<const char *> _deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
@@ -56,6 +64,10 @@ private:
     VkQueue _presentQueue;
 
     VkSurfaceKHR _surface;
+    VkSwapchainKHR _swapChain;
+    std::vector<VkImage> _swapChainImages;
+    VkFormat _swapChainImageFormat;
+    VkExtent2D _swapChainExtent;
 
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
@@ -90,7 +102,19 @@ private:
 
     /// @brief Creates the Vulkan instance from which all further Vulkan resources will be created/allocated/used etc.
     void CreateInstance();
-    
+
+    void CreateSwapChain();
+
+#pragma region SwapchainHelpers
+    SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+
+    VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+
+    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+
+    VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+#pragma endregion
+
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;
 
