@@ -118,6 +118,8 @@ private:
 
     void CreateImageViews();
 
+    void CreateGraphicsPipeline();
+
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;
 

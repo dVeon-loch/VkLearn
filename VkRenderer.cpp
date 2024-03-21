@@ -49,6 +49,7 @@ void VkRenderer::InitVulkan()
 	CreateLogicalDevice();
 	CreateSwapChain();
 	CreateImageViews();
+	CreateGraphicsPipeline();
 }
 
 bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
@@ -463,6 +464,10 @@ void VkRenderer::CreateImageViews()
 
 		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: "+i);
 	}
+}
+
+void VkRenderer::CreateGraphicsPipeline()
+{
 }
 
 void VkRenderer::PrintDebugInfo() const
