@@ -70,6 +70,10 @@ private:
     VkExtent2D _swapChainExtent;
     std::vector<VkImageView> _swapChainImageViews;
 
+    VkPipelineLayout _pipelineLayout;
+    VkRenderPass _renderPass;
+    VkPipelineLayout _pipelineLayout;
+
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
     void run() {
@@ -117,6 +121,8 @@ private:
 #pragma endregion
 
     void CreateImageViews();
+
+    void CreateRenderPass();
 
     void CreateGraphicsPipeline();
 
