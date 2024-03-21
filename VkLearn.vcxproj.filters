@@ -33,4 +33,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\hardcoded_triangle.vert" />
+    <None Include="shaders\hardcoded_triangle.frag" />
+  </ItemGroup>
 </Project>

@@ -69,6 +69,12 @@ private:
     VkFormat _swapChainImageFormat;
     VkExtent2D _swapChainExtent;
     std::vector<VkImageView> _swapChainImageViews;
+    std::vector<VkFramebuffer> _swapChainFramebuffers;
+
+    VkPipelineLayout _pipelineLayout;
+    VkRenderPass _renderPass;
+    VkPipeline _graphicsPipeline;
+
 
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
@@ -117,6 +123,16 @@ private:
 #pragma endregion
 
     void CreateImageViews();
+
+    void CreateRenderPass();
+
+    void CreateGraphicsPipeline();
+
+#pragma region GraphicsPipelineHelpers
+    VkShaderModule CreateShaderModule(const std::vector<char>& code);
+#pragma endregion
+
+    void CreateFramebuffers();
 
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;
