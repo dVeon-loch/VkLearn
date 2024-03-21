@@ -51,6 +51,9 @@ void VkRenderer::InitVulkan()
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandPool();
+	CreateCommandBuffer();
 }
 
 bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
@@ -205,6 +208,12 @@ void VkRenderer::CreateSurface()
 
 void VkRenderer::Cleanup()
 {
+	vkDestroyCommandPool(_device, _commandPool, nullptr);
+
+	for (const auto &framebuffer : _swapChainFramebuffers) {
+		vkDestroyFramebuffer(_device, framebuffer, nullptr);
+	}
+
 	vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
 
 	vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
@@ -676,6 +685,73 @@ VkShaderModule VkRenderer::CreateShaderModule(const std::vector<char>& code)
 
 void VkRenderer::CreateFramebuffers()
 {
+	_swapChainFramebuffers.resize(_swapChainImageViews.size()); // One framebuffer per image view/image
+
+	for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+		VkImageView attachments[] = {
+			_swapChainImageViews[i]
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = _renderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = _swapChainExtent.width;
+		framebufferInfo.height = _swapChainExtent.height;
+		framebufferInfo.layers = 1;
+
+		VK_CHECK_RESULT(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_swapChainFramebuffers[i])l, "create framebuffer: " + i);
+	}
+}
+
+void VkRenderer::CreateCommandPool()
+{
+	QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(_physicalDevice);
+
+	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+	/*
+	There are two possible flags for command pools :
+
+	VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: Hint that command buffers are rerecorded with new commands very often(may change memory allocation behavior)
+	VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT : Allow command buffers to be rerecorded individually, without this flag they all have to be reset together
+
+	We will be recording a command buffer every frame, so we want to be able to reset and rerecord over it.Thus, we need to set the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag bit for our command pool.
+	*/
+	VK_CHECK_RESULT(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool), "create command pool");
+}
+
+void VkRenderer::CreateCommandBuffer()
+{
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = _commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	/*The level parameter specifies if the allocated command buffers are primary or secondary command buffers.
+
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY: Can be submitted to a queue for execution, but cannot be called from other command buffers.
+    VK_COMMAND_BUFFER_LEVEL_SECONDARY: Cannot be submitted directly, but can be called from primary command buffers.
+	*/
+
+	VK_CHECK_RESULT(vkAllocateCommandBuffers(_device, &allocInfo, &_commandBuffer), "allocate command buffer");
+}
+
+void VkRenderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+{
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = 0; // Optional
+	beginInfo.pInheritanceInfo = nullptr; // Optional
+
+	VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo), "begin recording command buffer");
+
+
 }
 
 void VkRenderer::PrintDebugInfo() const
