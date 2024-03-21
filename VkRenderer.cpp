@@ -205,6 +205,8 @@ void VkRenderer::CreateSurface()
 
 void VkRenderer::Cleanup()
 {
+	vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
+
 	vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
 
 	vkDestroyRenderPass(_device, _renderPass, nullptr);
@@ -509,8 +511,8 @@ void VkRenderer::CreateRenderPass()
 
 void VkRenderer::CreateGraphicsPipeline()
 {
-	auto vertShaderCode = vkutil::ReadFile("shaders/vert.spv");
-	auto fragShaderCode = vkutil::ReadFile("shaders/frag.spv");
+	auto vertShaderCode = vkutil::ReadFile("shaders/hardcoded_triangle.vert.spv");
+	auto fragShaderCode = vkutil::ReadFile("shaders/hardcoded_triangle.frag.spv");
 
 	VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
 	VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
@@ -632,6 +634,29 @@ void VkRenderer::CreateGraphicsPipeline()
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &_pipelineLayout), "create pipeline layout");
 
+	// Graphics pipeline creation
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = nullptr; // Optional
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = nullptr;
+	pipelineInfo.layout = _pipelineLayout;
+	pipelineInfo.renderPass = _renderPass;
+	pipelineInfo.subpass = 0; // first index
+
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional, we won't be deriving this pipeline from any other pipeline
+	pipelineInfo.basePipelineIndex = -1; // Optional
+
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline), "create graphics pipeline");
+
 	vkDestroyShaderModule(_device, fragShaderModule, nullptr);
 	vkDestroyShaderModule(_device, vertShaderModule, nullptr);
 }
@@ -647,6 +672,10 @@ VkShaderModule VkRenderer::CreateShaderModule(const std::vector<char>& code)
 	VK_CHECK_RESULT(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule), "create shader module");
 
 	return shaderModule;
+}
+
+void VkRenderer::CreateFramebuffers()
+{
 }
 
 void VkRenderer::PrintDebugInfo() const
