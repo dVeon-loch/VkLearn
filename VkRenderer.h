@@ -120,6 +120,11 @@ private:
 
     void CreateGraphicsPipeline();
 
+#pragma region GraphicsPipelineHelpers
+    VkShaderModule CreateShaderModule(const std::vector<char>& code);
+
+#pragma endregion
+
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;
 

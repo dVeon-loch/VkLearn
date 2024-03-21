@@ -468,6 +468,46 @@ void VkRenderer::CreateImageViews()
 
 void VkRenderer::CreateGraphicsPipeline()
 {
+	auto vertShaderCode = vkutil::ReadFile("shaders/vert.spv");
+	auto fragShaderCode = vkutil::ReadFile("shaders/frag.spv");
+
+	VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
+	VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
+
+	// VERTEX STAGE CREATION
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT; // This create info is for the vertex stage
+	vertShaderStageInfo.module = vertShaderModule;
+	vertShaderStageInfo.pName = "main"; // We can specify any entry point into the shaders, stick with main
+
+	// FRAGMENT STAGE CREATION
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT; // This create info is for the fragment stage
+	fragShaderStageInfo.module = fragShaderModule;
+	fragShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+
+
+
+	vkDestroyShaderModule(_device, fragShaderModule, nullptr);
+	vkDestroyShaderModule(_device, vertShaderModule, nullptr);
+}
+
+VkShaderModule VkRenderer::CreateShaderModule(const std::vector<char>& code)
+{
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = code.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data()); // We need a reinterpret_cast here because we are casting between pointer types
+	
+	VkShaderModule shaderModule;
+	VK_CHECK_RESULT(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule), "create shader module");
+
+	return shaderModule;
 }
 
 void VkRenderer::PrintDebugInfo() const
