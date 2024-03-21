@@ -295,10 +295,12 @@ void VkRenderer::CreateSwapChain()
 	VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
 	VkExtent2D extent = ChooseSwapExtent(swapChainSupport.capabilities);
 
+	// Request an extra image so we don't have to wait on the driver to complete internal operations before we can acquire another image to render to
 	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
 	// 0 is a special value that means that there is no maximum
 	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+		// Clamp imageCount to the max if we have exceeded the max
 		imageCount = swapChainSupport.capabilities.maxImageCount;
 	}
 
@@ -309,12 +311,15 @@ void VkRenderer::CreateSwapChain()
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
 	createInfo.imageExtent = extent;
-	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	createInfo.imageArrayLayers = 1; // This is always 1 unless you are developing a stereoscopic 3D application
+	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // We're going to render directly to them, which means that they're used as color attachment
 
 	QueueFamilyIndices indices = FindQueueFamilies(_physicalDevice);
 	uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
+	/*
+    VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family. This option offers the best performance.
+    VK_SHARING_MODE_CONCURRENT: Images can be used across multiple queue families without explicit ownership transfers.
+	*/
 	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
@@ -325,12 +330,12 @@ void VkRenderer::CreateSwapChain()
 		createInfo.queueFamilyIndexCount = 0; // Optional
 		createInfo.pQueueFamilyIndices = nullptr; // Optional
 	}
-
+	// We can specify that a certain transform should be applied to images in the swap chain if it is supported (supportedTransforms in capabilities), like a 90 degree clockwise rotation or horizontal flip. To specify that you do not want any transformation, simply specify the current transformation
 	createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // The compositeAlpha field specifies if the alpha channel should be used for blending with other windows in the window system.
 	createInfo.presentMode = presentMode;
-	createInfo.clipped = VK_TRUE;
-	createInfo.oldSwapchain = VK_NULL_HANDLE;
+	createInfo.clipped = VK_TRUE; // If the clipped member is set to VK_TRUE then that means that we don't care about the color of pixels that are obscured, for example because another window is in front of them
+	createInfo.oldSwapchain = VK_NULL_HANDLE; // Will be used when we get to resizing the window
 
 	VK_CHECK_RESULT(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain),"create swapchain");
 
@@ -350,14 +355,20 @@ SwapChainSupportDetails VkRenderer::QuerySwapChainSupport(VkPhysicalDevice devic
 
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, nullptr);
-	swapchainSupportDetails.formats.resize(formatCount);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, swapchainSupportDetails.formats.data());
+	if(formatCount != 0)
+	{
+		swapchainSupportDetails.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, swapchainSupportDetails.formats.data());
+	}
 
 
 	uint32_t presentModesCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModesCount, nullptr);
-	swapchainSupportDetails.presentModes.resize(presentModesCount);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModesCount, swapchainSupportDetails.presentModes.data());
+	if (presentModesCount != 0)
+	{
+		swapchainSupportDetails.presentModes.resize(presentModesCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModesCount, swapchainSupportDetails.presentModes.data());
+	}
 
 	return swapchainSupportDetails;
 }
@@ -386,10 +397,19 @@ VkPresentModeKHR VkRenderer::ChooseSwapPresentMode(const std::vector<VkPresentMo
 // TODO: Explain this method
 VkExtent2D VkRenderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 {
-	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+	// if the extent is the special value, (0xFFFFFFFF, 0xFFFFFFFF), the surface size
+	// can be determined by the extent of the swapchain targeting this surface,
+	// else it must stay the same value as the current extent
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) 
+	{
 		return capabilities.currentExtent;
 	}
-	else {
+	else 
+	{
+		// The surface current extent is the special value, we need to calculate the 
+		// required swapchain extent
+
+		// get the extent in pixels of the glfw window we created
 		int width, height;
 		glfwGetFramebufferSize(_window, &width, &height);
 
@@ -398,6 +418,7 @@ VkExtent2D VkRenderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
 			static_cast<uint32_t>(height)
 		};
 
+		// clamp the extent to the limits
 		actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
 		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
