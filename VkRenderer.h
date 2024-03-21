@@ -68,6 +68,7 @@ private:
     std::vector<VkImage> _swapChainImages;
     VkFormat _swapChainImageFormat;
     VkExtent2D _swapChainExtent;
+    std::vector<VkImageView> _swapChainImageViews;
 
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
@@ -114,6 +115,8 @@ private:
 
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 #pragma endregion
+
+    void CreateImageViews();
 
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;

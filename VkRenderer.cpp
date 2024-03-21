@@ -48,6 +48,7 @@ void VkRenderer::InitVulkan()
 	PickPhysicalDevice();
 	CreateLogicalDevice();
 	CreateSwapChain();
+	CreateImageViews();
 }
 
 bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
@@ -202,6 +203,10 @@ void VkRenderer::CreateSurface()
 
 void VkRenderer::Cleanup()
 {
+	for (const auto &imageView : _swapChainImageViews) {
+		vkDestroyImageView(_device, imageView, nullptr);
+	}
+
 	vkDestroySwapchainKHR(_device, _swapChain, nullptr);
 
 	vkDestroyDevice(_device, nullptr);
@@ -423,6 +428,40 @@ VkExtent2D VkRenderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
 		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
 		return actualExtent;
+	}
+}
+
+void VkRenderer::CreateImageViews()
+{
+	// We need one image view per image in the swapchain
+	_swapChainImageViews.resize(_swapChainImages.size());
+
+	// Each image needs a corresponding  image view, so use a normal for loop to keep track of the index
+	for (size_t i = 0; i < _swapChainImages.size(); i++) 
+	{
+		VkImageViewCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = _swapChainImages[i];
+
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // This is going to be a regular 2D texture
+		createInfo.format = _swapChainImageFormat; // The format of the view is the same as the format of the swapchain image
+
+		// Swizzling allows us to swap the channels around, e.g. if we only want the red channel to be kept for some reason
+		// We won't need this for now so just leave everything as 'identity'
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+		// The subresourceRange field describes what the image's purpose is and which part of the image should be accessed.
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Use as a colour target
+		createInfo.subresourceRange.baseMipLevel = 0; // base mip level is just the first level.
+		createInfo.subresourceRange.levelCount = 1; // Only one level (no mipmap)
+		createInfo.subresourceRange.baseArrayLayer = 0; 
+		createInfo.subresourceRange.layerCount = 1; // We don't need any layers to this texture
+		// If you were working on a stereographic 3D application, then you would create a swap chain with multiple layers. You could then create multiple image views for each image representing the views for the left and right eyes by accessing different layers.
+
+		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: "+i);
 	}
 }
 
