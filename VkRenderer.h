@@ -6,6 +6,8 @@
 #include <string>
 #include <stdexcept>
 #include <optional>
+#include <stack>
+#include <functional>
 
 #include <vulkan/vk_enum_string_helper.h>
 
@@ -29,6 +31,35 @@ struct SwapChainSupportDetails
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
+};
+
+class DeletionStack
+{
+private:
+    std::stack<std::function<void(void)>> deletionFunctions;
+public:
+    void AddDeletor(const std::function<void(void)>& deletionFunction)
+    {
+        deletionFunctions.push(deletionFunction);
+    }
+
+    void RunDeletors()
+    {
+        size_t originalSize = deletionFunctions.size();
+        for (size_t i = 0; i < originalSize; i++)
+        {
+            std::invoke(deletionFunctions.top());
+            deletionFunctions.pop();
+        }
+    }
+
+    void Clear() 
+    {
+        while (deletionFunctions.size() > 0)
+        {
+            deletionFunctions.pop();
+        }
+    }
 };
 
 
@@ -56,6 +87,8 @@ private:
 #endif
 
     GLFWwindow* _window;
+
+    DeletionStack _mainDeletionStack;
 
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debugMessenger;

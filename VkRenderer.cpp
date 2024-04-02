@@ -126,30 +126,8 @@ void VkRenderer::DrawFrame()
 
 void VkRenderer::Cleanup()
 {
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
-	{
-		vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
-		vkDestroySemaphore(_device, _imageAvailableSemaphores[i], nullptr);
-		vkDestroyFence(_device, _inFlightFences[i], nullptr);
-	}
 
-	vkDestroyCommandPool(_device, _commandPool, nullptr);
-
-	for (const auto& framebuffer : _swapChainFramebuffers) {
-		vkDestroyFramebuffer(_device, framebuffer, nullptr);
-	}
-
-	vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
-
-	vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
-
-	vkDestroyRenderPass(_device, _renderPass, nullptr);
-
-	for (const auto& imageView : _swapChainImageViews) {
-		vkDestroyImageView(_device, imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(_device, _swapChain, nullptr);
+	_mainDeletionStack.RunDeletors();
 
 	vkDestroyDevice(_device, nullptr);
 
@@ -429,6 +407,12 @@ void VkRenderer::CreateSwapChain()
 
 	VK_CHECK_RESULT(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain),"create swapchain");
 
+	_mainDeletionStack.AddDeletor([&]
+		{
+			vkDestroySwapchainKHR(_device, _swapChain, nullptr);
+		}
+	);
+
 	vkGetSwapchainImagesKHR(_device, _swapChain, &imageCount, nullptr);
 	_swapChainImages.resize(imageCount);
 	vkGetSwapchainImagesKHR(_device, _swapChain, &imageCount, _swapChainImages.data());
@@ -547,6 +531,12 @@ void VkRenderer::CreateImageViews()
 		// If you were working on a stereographic 3D application, then you would create a swap chain with multiple layers. You could then create multiple image views for each image representing the views for the left and right eyes by accessing different layers.
 
 		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: "+i);
+
+		_mainDeletionStack.AddDeletor([=] 
+			{ 
+				vkDestroyImageView(_device, _swapChainImageViews[i], nullptr); 
+			}
+		);
 	}
 }
 
@@ -597,6 +587,12 @@ void VkRenderer::CreateRenderPass()
 	renderPassInfo.pDependencies = &dependency;
 
 	VK_CHECK_RESULT(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass),"create render pass");
+
+	_mainDeletionStack.AddDeletor([&] 
+		{
+			vkDestroyRenderPass(_device, _renderPass, nullptr);
+		}
+	);
 }
 
 void VkRenderer::CreateGraphicsPipeline()
@@ -732,6 +728,12 @@ void VkRenderer::CreateGraphicsPipeline()
 
 	VK_CHECK_RESULT(vkCreatePipelineLayout(_device, &pipelineLayoutInfo, nullptr, &_pipelineLayout), "create pipeline layout");
 
+	_mainDeletionStack.AddDeletor([&]
+		{
+			vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
+		}
+	);
+
 	// Graphics pipeline creation
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -754,6 +756,12 @@ void VkRenderer::CreateGraphicsPipeline()
 	pipelineInfo.basePipelineIndex = -1; // Optional
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_graphicsPipeline), "create graphics pipeline");
+
+	_mainDeletionStack.AddDeletor([&]
+		{
+			vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
+		}
+	);
 
 	vkDestroyShaderModule(_device, fragShaderModule, nullptr);
 	vkDestroyShaderModule(_device, vertShaderModule, nullptr);
@@ -791,6 +799,12 @@ void VkRenderer::CreateFramebuffers()
 		framebufferInfo.layers = 1;
 
 		VK_CHECK_RESULT(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]), "create framebuffer: " + i);
+
+		_mainDeletionStack.AddDeletor([=]
+			{
+				vkDestroyFramebuffer(_device, _swapChainFramebuffers[i], nullptr);
+			}
+		);
 	}
 }
 
@@ -812,6 +826,12 @@ void VkRenderer::CreateCommandPool()
 	We will be recording a command buffer every frame, so we want to be able to reset and rerecord over it.Thus, we need to set the VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag bit for our command pool.
 	*/
 	VK_CHECK_RESULT(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool), "create command pool");
+
+	_mainDeletionStack.AddDeletor([&]
+		{
+			vkDestroyCommandPool(_device, _commandPool, nullptr);
+		}
+	);
 }
 
 void VkRenderer::CreateCommandBuffers()
@@ -897,6 +917,14 @@ void VkRenderer::CreateSyncObjects()
 		VK_CHECK_RESULT(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_imageAvailableSemaphores[i]), "create image available semaphore: " + i);
 		VK_CHECK_RESULT(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_renderFinishedSemaphores[i]), "create render finished semaphore: " + i);
 		VK_CHECK_RESULT(vkCreateFence(_device, &fenceInfo, nullptr, &_inFlightFences[i]), "create in-flight fence: " + i);
+
+		_mainDeletionStack.AddDeletor([=]
+			{
+				vkDestroySemaphore(_device, _imageAvailableSemaphores[i], nullptr);
+				vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
+				vkDestroyFence(_device, _inFlightFences[i], nullptr);
+			}
+		);
 	}
 }
 
