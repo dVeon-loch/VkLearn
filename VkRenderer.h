@@ -39,6 +39,8 @@ private:
 
     static constexpr uint32_t HEIGHT = 600;
 
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
     const std::vector<std::string> _validationLayers = {
     "VK_LAYER_KHRONOS_validation"
     };
@@ -77,11 +79,13 @@ private:
     VkPipeline _graphicsPipeline;
 
     VkCommandPool _commandPool;
-    VkCommandBuffer _commandBuffer;
+    std::vector<VkCommandBuffer> _commandBuffers;
 
-    VkSemaphore _imageAvailableSemaphore;
-    VkSemaphore _renderFinishedSemaphore;
-    VkFence _inFlightFence;
+    std::vector<VkSemaphore> _imageAvailableSemaphores;
+    std::vector<VkSemaphore> _renderFinishedSemaphores;
+    std::vector<VkFence> _inFlightFences;
+
+    uint32_t _currentFrame = 0;
 
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
@@ -145,7 +149,7 @@ private:
 
     void CreateCommandPool();
 
-    void CreateCommandBuffer();
+    void CreateCommandBuffers();
 
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
