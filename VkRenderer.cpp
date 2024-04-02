@@ -54,6 +54,111 @@ void VkRenderer::InitVulkan()
 	CreateFramebuffers();
 	CreateCommandPool();
 	CreateCommandBuffer();
+	CreateSyncObjects();
+}
+
+void VkRenderer::MainLoop()
+{
+	while (!glfwWindowShouldClose(_window))
+	{
+		glfwPollEvents();
+		DrawFrame();
+	}
+
+	vkDeviceWaitIdle(_device);
+}
+
+void VkRenderer::DrawFrame()
+{
+	///Wait for the previous frame to finish
+	vkWaitForFences(_device, 1, &_inFlightFence, VK_TRUE, UINT64_MAX);
+	// After waiting, reset the fence to unsignalled state for next frame
+	vkResetFences(_device, 1, &_inFlightFence);
+
+	///Acquire an image from the swap chain
+	uint32_t imageIndex; // The index refers to the VkImage in our _swapChainImages array
+	vkAcquireNextImageKHR(_device, _swapChain, UINT64_MAX, _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+
+	///Record a command buffer which draws the scene onto that image
+	//First, we call vkResetCommandBuffer on the command buffer to make sure it is able to be recorded.
+	vkResetCommandBuffer(_commandBuffer, 0);
+	RecordCommandBuffer(_commandBuffer, imageIndex);
+
+	//Submit the recorded command buffer
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[] = { _imageAvailableSemaphore };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }; // We want to wait with writing colors to the image until it's available
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &_commandBuffer;
+
+	// which semaphores to signal once the command buffer(s) have finished execution
+	VkSemaphore signalSemaphores[] = { _renderFinishedSemaphore };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	VK_CHECK_RESULT(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _inFlightFence), "submit draw frame command buffer");
+
+	//Present the swap chain image
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+
+	VkSwapchainKHR swapChains[] = { _swapChain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+
+	presentInfo.pResults = nullptr; // Optional
+
+	VK_CHECK_RESULT(vkQueuePresentKHR(_presentQueue, &presentInfo), "present image");
+}
+
+void VkRenderer::Cleanup()
+{
+	vkDestroySemaphore(_device, _imageAvailableSemaphore, nullptr);
+	vkDestroySemaphore(_device, _renderFinishedSemaphore, nullptr);
+	vkDestroyFence(_device, _inFlightFence, nullptr);
+
+	vkDestroyCommandPool(_device, _commandPool, nullptr);
+
+	for (const auto& framebuffer : _swapChainFramebuffers) {
+		vkDestroyFramebuffer(_device, framebuffer, nullptr);
+	}
+
+	vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
+
+	vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
+
+	vkDestroyRenderPass(_device, _renderPass, nullptr);
+
+	for (const auto& imageView : _swapChainImageViews) {
+		vkDestroyImageView(_device, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(_device, _swapChain, nullptr);
+
+	vkDestroyDevice(_device, nullptr);
+
+	if (_enableValidationLayers) {
+		DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
+	}
+
+	vkDestroySurfaceKHR(_instance, _surface, nullptr);
+
+	vkDestroyInstance(_instance, nullptr);
+
+	/// GLFW Cleanup
+	glfwDestroyWindow(_window);
+	glfwTerminate();
 }
 
 bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
@@ -204,48 +309,6 @@ void VkRenderer::CreateLogicalDevice()
 void VkRenderer::CreateSurface()
 {
 	VK_CHECK_RESULT(glfwCreateWindowSurface(_instance, _window, nullptr, &_surface), "create window surface");
-}
-
-void VkRenderer::Cleanup()
-{
-	vkDestroyCommandPool(_device, _commandPool, nullptr);
-
-	for (const auto &framebuffer : _swapChainFramebuffers) {
-		vkDestroyFramebuffer(_device, framebuffer, nullptr);
-	}
-
-	vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
-
-	vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
-
-	vkDestroyRenderPass(_device, _renderPass, nullptr);
-
-	for (const auto &imageView : _swapChainImageViews) {
-		vkDestroyImageView(_device, imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(_device, _swapChain, nullptr);
-
-	vkDestroyDevice(_device, nullptr);
-
-	if (_enableValidationLayers) {
-		DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
-	}
-
-	vkDestroySurfaceKHR(_instance, _surface, nullptr);
-
-	vkDestroyInstance(_instance, nullptr);
-
-	/// GLFW Cleanup
-	glfwDestroyWindow(_window);
-	glfwTerminate();
-}
-
-void VkRenderer::MainLoop()
-{
-	while (!glfwWindowShouldClose(_window)) {
-		glfwPollEvents();
-	}
 }
 
 void VkRenderer::CreateInstance()
@@ -515,6 +578,19 @@ void VkRenderer::CreateRenderPass()
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
 
+	VkSubpassDependency dependency{};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL; // refers to the implicit subpass before or after the render pass depending on whether it is specified in srcSubpass or dstSubpass
+	dependency.dstSubpass = 0; // dstSubpass must always be higher than srcSubpass, (unless one of the subpasses is VK_SUBPASS_EXTERNAL
+
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	renderPassInfo.dependencyCount = 1;
+	renderPassInfo.pDependencies = &dependency;
+
 	VK_CHECK_RESULT(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass),"create render pass");
 }
 
@@ -778,15 +854,15 @@ void VkRenderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = static_cast<float>(swapChainExtent.width);
-	viewport.height = static_cast<float>(swapChainExtent.height);
+	viewport.width = static_cast<float>(_swapChainExtent.width);
+	viewport.height = static_cast<float>(_swapChainExtent.height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
-	scissor.extent = swapChainExtent;
+	scissor.extent = _swapChainExtent;
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
@@ -794,6 +870,22 @@ void VkRenderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
 	vkCmdEndRenderPass(commandBuffer);
 
 	VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer), "finish recording command buffer");
+}
+
+void VkRenderer::CreateSyncObjects()
+{
+	VkSemaphoreCreateInfo semaphoreInfo{};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkFenceCreateInfo fenceInfo{};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // So that the first time we use this fence we don't block CPU indefinitely
+
+	VK_CHECK_RESULT(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_imageAvailableSemaphore), "create image available semaphore");
+	VK_CHECK_RESULT(vkCreateSemaphore(_device, &semaphoreInfo, nullptr, &_renderFinishedSemaphore), "create render finished semaphore");
+	VK_CHECK_RESULT(vkCreateFence(_device, &fenceInfo, nullptr, &_inFlightFence), "create in-flight fence");
+
+
 }
 
 void VkRenderer::PrintDebugInfo() const

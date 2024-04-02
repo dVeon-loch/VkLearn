@@ -79,6 +79,10 @@ private:
     VkCommandPool _commandPool;
     VkCommandBuffer _commandBuffer;
 
+    VkSemaphore _imageAvailableSemaphore;
+    VkSemaphore _renderFinishedSemaphore;
+    VkFence _inFlightFence;
+
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
     void run() {
@@ -109,6 +113,8 @@ private:
 
     /// @brief Runs the main rendering loop of our renderer
     void MainLoop();
+
+    void DrawFrame();
 
     /// @brief Creates the Vulkan instance from which all further Vulkan resources will be created/allocated/used etc.
     void CreateInstance();
@@ -142,6 +148,8 @@ private:
     void CreateCommandBuffer();
 
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    void CreateSyncObjects();
 
     /// @brief Prints out assorted info that might be useful when debugging the renderer
     void PrintDebugInfo() const;
