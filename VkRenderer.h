@@ -38,15 +38,14 @@ class DeletionStack
 private:
     std::stack<std::function<void(void)>> deletionFunctions;
 public:
-    void AddDeletor(const std::function<void(void)>& deletionFunction)
+    void AddDeletor(std::function<void(void)>&& deletionFunction)
     {
         deletionFunctions.push(deletionFunction);
     }
 
     void RunDeletors()
     {
-        size_t originalSize = deletionFunctions.size();
-        for (size_t i = 0; i < originalSize; i++)
+        while (!deletionFunctions.empty())
         {
             std::invoke(deletionFunctions.top());
             deletionFunctions.pop();
