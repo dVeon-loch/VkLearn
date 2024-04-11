@@ -40,7 +40,7 @@ private:
 public:
     void AddDeletor(std::function<void(void)>&& deletionFunction)
     {
-        deletionFunctions.push(deletionFunction);
+        deletionFunctions.push(std::move(deletionFunction));
     }
 
     void RunDeletors()
