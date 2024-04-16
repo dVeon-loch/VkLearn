@@ -1,0 +1,78 @@
+<mxfile host="app.diagrams.net" modified="2024-04-16T10:16:38.786Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0" etag="XObPOFBRIb_PssU2X1yB" version="21.2.6" type="device">
+  <diagram name="Page-1" id="P39IIvoE0NV8pmFLBoOe">
+    <mxGraphModel dx="875" dy="448" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.484;entryY=-0.044;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--1" target="4CE35wQ8hkZmS5z_MJO--2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--1" value="How do we interact with Vulkan and our window?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="50" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--2" target="4CE35wQ8hkZmS5z_MJO--18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--2" value="Get an instance" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="200" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--3" target="4CE35wQ8hkZmS5z_MJO--2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--3" value="Get required extensions" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--4" target="4CE35wQ8hkZmS5z_MJO--2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--4" value="Set up validation layers" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="240" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--8" target="4CE35wQ8hkZmS5z_MJO--14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--8" value="Get a physical device" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="460" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--10" target="4CE35wQ8hkZmS5z_MJO--8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--10" value="Does the physical device support the extensions we need?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="380" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--11" target="4CE35wQ8hkZmS5z_MJO--8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--11" value="Does the physical device support our other requirements?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="530" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--14" value="Get a logical device" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="590" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--16" target="4CE35wQ8hkZmS5z_MJO--14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--16" value="Enable required logical device extensions" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="620" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--18" target="4CE35wQ8hkZmS5z_MJO--8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--18" value="Create a VK surface using GLFW" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="330" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1.014;entryY=0.631;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--21" target="4CE35wQ8hkZmS5z_MJO--8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="4CE35wQ8hkZmS5z_MJO--21">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="510" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4CE35wQ8hkZmS5z_MJO--21" value="Does the physical device support our required swapchain parameters?" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="460" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
