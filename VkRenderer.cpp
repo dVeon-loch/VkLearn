@@ -390,6 +390,13 @@ void VkRenderer::CleanupSwapChain() {
 }
 
 void VkRenderer::RecreateSwapChain() {
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(_window, &width, &height);
+	while (width == 0 || height == 0) {
+		glfwGetFramebufferSize(_window, &width, &height);
+		glfwWaitEvents();
+	}
+
 	// wait for device to be finished with all resources before doing anything
 	vkDeviceWaitIdle(_device);
 
