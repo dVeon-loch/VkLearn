@@ -35,7 +35,7 @@ void VkRenderer::InitWindow()
 	// Tell GLFW not to create an OpenGL context since we don't need one
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// Don't worry about resizing the window for now, just disable it
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	// Store a handle to our window in our class
 	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr);
 }
