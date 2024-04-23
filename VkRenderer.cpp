@@ -128,12 +128,12 @@ void VkRenderer::DrawFrame()
 
 	presentInfo.pResults = nullptr; // Optional
 
-	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
+	VkResult presentResult = vkQueuePresentKHR(_presentQueue, &presentInfo);
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 		RecreateSwapChain();
 	}
-	else if (result != VK_SUCCESS) {
+	else if (presentResult != VK_SUCCESS) {
 		throw std::runtime_error("failed to present swap chain image!");
 	}
 
