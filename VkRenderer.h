@@ -89,6 +89,8 @@ private:
 
     DeletionStack _mainDeletionStack;
 
+    DeletionStack _swapChainDeletionStack;
+
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debugMessenger;
 
@@ -154,6 +156,10 @@ private:
 
     /// @brief Creates the Vulkan instance from which all further Vulkan resources will be created/allocated/used etc.
     void CreateInstance();
+
+    void CleanupSwapChain();
+
+    void RecreateSwapChain();
 
     void CreateSwapChain();
 

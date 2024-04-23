@@ -72,13 +72,22 @@ void VkRenderer::DrawFrame()
 {
 	///Wait for the previous frame to finish
 	vkWaitForFences(_device, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
-	// After waiting, reset the fence to unsignalled state for next frame
-	vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
+	
 
 	///Acquire an image from the swap chain
 	uint32_t imageIndex; // The index refers to the VkImage in our _swapChainImages array
-	vkAcquireNextImageKHR(_device, _swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(_device, _swapChain, UINT64_MAX, _imageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		RecreateSwapChain();
+		return;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
+
+	// After waiting and ensuring that the swapchain has been recreated, reset the fence to unsignalled state for next frame
+	vkResetFences(_device, 1, &_inFlightFences[_currentFrame]);
 
 	///Record a command buffer which draws the scene onto that image
 	//First, we call vkResetCommandBuffer on the command buffer to make sure it is able to be recorded.
@@ -119,13 +128,22 @@ void VkRenderer::DrawFrame()
 
 	presentInfo.pResults = nullptr; // Optional
 
-	VK_CHECK_RESULT(vkQueuePresentKHR(_presentQueue, &presentInfo), "present image");
+	VkResult result = vkQueuePresentKHR(_presentQueue, &presentInfo);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		RecreateSwapChain();
+	}
+	else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to present swap chain image!");
+	}
 
 	_currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT; // 0: 0+1 = 1, 1 % 2 = 1... 2: 2 + 1 = 3, 3 % 2 = 1 ... loops around
 }
 
 void VkRenderer::Cleanup()
 {
+
+	CleanupSwapChain();
 
 	_mainDeletionStack.RunDeletors();
 
@@ -355,6 +373,25 @@ void VkRenderer::CreateInstance()
 	VK_CHECK_RESULT(vkCreateInstance(&instanceCreateInfo, nullptr, &_instance), "create instance");
 }
 
+void VkRenderer::CleanupSwapChain() {
+	_swapChainDeletionStack.RunDeletors();
+}
+
+void VkRenderer::RecreateSwapChain() {
+	// wait for device to be finished with all resources before doing anything
+	vkDeviceWaitIdle(_device);
+
+	// Cleanup all previously created objects first
+	CleanupSwapChain();
+
+	//Obviously, we'll have to recreate the swap chain itself. 
+	CreateSwapChain();
+	// The image views need to be recreated because they are based directly on the swap chain images. 
+	CreateImageViews();
+	// Finally, the framebuffers directly depend on the swap chain images, and thus must be recreated as well.
+	CreateFramebuffers();
+}
+
 void VkRenderer::CreateSwapChain()
 {
 	SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(_physicalDevice);
@@ -407,7 +444,7 @@ void VkRenderer::CreateSwapChain()
 
 	VK_CHECK_RESULT(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain),"create swapchain");
 
-	_mainDeletionStack.AddDeletor([&]
+	_swapChainDeletionStack.AddDeletor([&]
 		{
 			vkDestroySwapchainKHR(_device, _swapChain, nullptr);
 		}
@@ -532,7 +569,7 @@ void VkRenderer::CreateImageViews()
 
 		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: "+i);
 
-		_mainDeletionStack.AddDeletor([=] 
+		_swapChainDeletionStack.AddDeletor([=]
 			{ 
 				vkDestroyImageView(_device, _swapChainImageViews[i], nullptr); 
 			}
@@ -800,7 +837,7 @@ void VkRenderer::CreateFramebuffers()
 
 		VK_CHECK_RESULT(vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &_swapChainFramebuffers[i]), "create framebuffer: " + i);
 
-		_mainDeletionStack.AddDeletor([=]
+		_swapChainDeletionStack.AddDeletor([=]
 			{
 				vkDestroyFramebuffer(_device, _swapChainFramebuffers[i], nullptr);
 			}
@@ -959,9 +996,9 @@ std::optional<std::string> VkRenderer::CheckValidationLayerSupport()
 
 	// Loop over all of the layers that we stated we require in _validationLayers
 	// For each required layer, loop over the *available* layers of the instance.
-	// If the required layer matches any of the available layers, break out and check the next layer
-	// If it doesn't, the required layer is not available, so return false.
-	// If all layers are found, return true
+	// If the required layer matches any of the available layers, break out and check the next required layer
+	// If it doesn't, the required layer is not available, so return an optional with a value of the unavailable layers
+	// If all layers are found, return an empty optional
 	for (const auto& layerName : _validationLayers) {
 		bool layerFound = false;
 
