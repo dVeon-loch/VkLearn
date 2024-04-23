@@ -144,8 +144,8 @@
     <ClInclude Include="VkUtils.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\hardcoded_triangle.frag" />
-    <None Include="shaders\hardcoded_triangle.vert" />
+    <None Include="shaders\triangle.frag" />
+    <None Include="shaders\triangle.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
