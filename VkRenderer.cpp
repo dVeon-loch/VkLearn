@@ -653,8 +653,8 @@ void VkRenderer::CreateRenderPass()
 
 void VkRenderer::CreateGraphicsPipeline()
 {
-	auto vertShaderCode = vkutil::ReadFile("shaders/hardcoded_triangle.vert.spv");
-	auto fragShaderCode = vkutil::ReadFile("shaders/hardcoded_triangle.frag.spv");
+	auto vertShaderCode = vkutil::ReadFile("shaders/triangle.vert.spv");
+	auto fragShaderCode = vkutil::ReadFile("shaders/triangle.frag.spv");
 
 	VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
 	VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
