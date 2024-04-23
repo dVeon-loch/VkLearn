@@ -121,6 +121,8 @@ private:
 
     uint32_t _currentFrame = 0;
 
+    bool _framebufferResized = false;
+
 public:
     /// @brief Public method that consumers of this renderer require to run the render loop
     void run() {
@@ -132,6 +134,8 @@ public:
         MainLoop();
         Cleanup();
     }
+
+    void SetFramebufferResized(bool resized) { _framebufferResized = resized; }
 private:
     /// @brief Initialises the window to which we will be rendering
     void InitWindow();

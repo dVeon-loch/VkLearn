@@ -28,6 +28,12 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
 	}
 }
 
+static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+	auto rendererInstance = reinterpret_cast<VkRenderer*>(glfwGetWindowUserPointer(window));
+	rendererInstance->SetFramebufferResized(true);
+}
+
 void VkRenderer::InitWindow()
 {
 	// Initialise GLFW and OpenGL
@@ -36,8 +42,13 @@ void VkRenderer::InitWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// Don't worry about resizing the window for now, just disable it
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
 	// Store a handle to our window in our class
-	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr);
+	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr); 
+
+	glfwSetWindowUserPointer(_window, this); // Allows us to set the owner instance class for this window
+
+	glfwSetFramebufferSizeCallback(_window, FramebufferResizeCallback);
 }
 
 void VkRenderer::InitVulkan()
@@ -130,7 +141,8 @@ void VkRenderer::DrawFrame()
 
 	VkResult presentResult = vkQueuePresentKHR(_presentQueue, &presentInfo);
 
-	if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized) {
+		_framebufferResized = false;
 		RecreateSwapChain();
 	}
 	else if (presentResult != VK_SUCCESS) {
