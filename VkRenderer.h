@@ -166,6 +166,8 @@ private:
 
     bool _framebufferResized = false;
 
+    VkBuffer _vertexBuffer;
+
     const std::vector<Vertex> vertices = {
     {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -237,6 +239,8 @@ private:
 #pragma endregion
 
     void CreateFramebuffers();
+
+    void CreateVertexBuffer();
 
     void CreateCommandPool();
 

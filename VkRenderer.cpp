@@ -64,6 +64,7 @@ void VkRenderer::InitVulkan()
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
+	CreateVertexBuffer();
 	CreateCommandBuffers();
 	CreateSyncObjects();
 }
@@ -865,6 +866,21 @@ void VkRenderer::CreateFramebuffers()
 			}
 		);
 	}
+}
+
+void VkRenderer::CreateVertexBuffer()
+{
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VK_CHECK_RESULT(vkCreateBuffer(_device, &bufferInfo, nullptr, &_vertexBuffer), "create vertex buffer");
+
+	_mainDeletionStack.AddDeletor([&]{
+		vkDestroyBuffer(_device, _vertexBuffer, nullptr);
+	});
 }
 
 void VkRenderer::CreateCommandPool()
