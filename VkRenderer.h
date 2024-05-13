@@ -170,12 +170,12 @@ private:
     VkDeviceMemory _vertexBufferMemory;
 
     const std::vector<Vertex> _vertices = {
-    {{0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}, // TOP RIGHT
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // BOTTOM LEFT
     {{-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}}, // TOP LEFT
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // BOTTOM LEFT
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // BOTTOM LEFT
+    {{0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}, // TOP RIGHT
+    {{0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}}, // TOP RIGHT
     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}, // BOTTOM RIGHT
-    {{0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}} // TOP RIGHT
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}} // BOTTOM LEFT
     };
 
 public:
