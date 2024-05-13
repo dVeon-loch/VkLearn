@@ -868,6 +868,20 @@ void VkRenderer::CreateFramebuffers()
 	}
 }
 
+uint32_t VkRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) 
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
+
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+
+	throw std::runtime_error("failed to find suitable memory type!");
+}
+
 void VkRenderer::CreateVertexBuffer()
 {
 	VkBufferCreateInfo bufferInfo{};
@@ -880,6 +894,23 @@ void VkRenderer::CreateVertexBuffer()
 
 	_mainDeletionStack.AddDeletor([&]{
 		vkDestroyBuffer(_device, _vertexBuffer, nullptr);
+	});
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(_device, _vertexBuffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	VK_CHECK_RESULT(vkAllocateMemory(_device, &allocInfo, nullptr, &_vertexBufferMemory), "allocate memory for the vertex buffer");
+
+	vkBindBufferMemory(_device, _vertexBuffer, _vertexBufferMemory, 0);
+
+	_mainDeletionStack.AddDeletor([&] {
+		vkDestroyBuffer(_device, _vertexBuffer, nullptr);
+		vkFreeMemory(_device, _vertexBufferMemory, nullptr);
 	});
 }
 

@@ -167,6 +167,7 @@ private:
     bool _framebufferResized = false;
 
     VkBuffer _vertexBuffer;
+    VkDeviceMemory _vertexBufferMemory;
 
     const std::vector<Vertex> vertices = {
     {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -239,6 +240,8 @@ private:
 #pragma endregion
 
     void CreateFramebuffers();
+
+    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     void CreateVertexBuffer();
 
