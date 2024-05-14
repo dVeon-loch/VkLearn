@@ -303,14 +303,7 @@ void VkRenderer::CreateLogicalDevice()
 
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(_deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = _deviceExtensions.data();
-	// Don't need to do this in newer versions of Vulkan
-	/*if (_enableValidationLayers) {
-		createInfo.enabledLayerCount = static_cast<uint32_t>(_validationLayers.size());
-		createInfo.ppEnabledLayerNames = _validationLayers.data();
-	}
-	else {
-		createInfo.enabledLayerCount = 0;
-	}*/
+	
 	VK_CHECK_RESULT(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device), "create logical device");
 
 	// Get handles to queues we need
