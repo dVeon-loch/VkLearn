@@ -162,6 +162,8 @@ private:
 	std::vector<VkBuffer> _uniformBuffers;
 	std::vector<VkDeviceMemory> _uniformBuffersMemory;
 	std::vector<void*> _uniformBuffersMapped;
+	VkDescriptorPool _descriptorPool;
+	std::vector<VkDescriptorSet> _descriptorSets;
 
 	VkPipelineLayout _pipelineLayout;
 	VkRenderPass _renderPass;
@@ -283,6 +285,10 @@ private:
 	void CreateDescriptorSetLayout();
 
 	void CreateUniformBuffers();
+
+	void CreateDescriptorPool();
+
+	void CreateDescriptorSets();
 
 	void UpdateUniformBuffer(uint32_t currentImage);
 
