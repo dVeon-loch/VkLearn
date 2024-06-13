@@ -1,5 +1,10 @@
 #include "VkRenderer.h"
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <chrono>
 #include<cstring>
 #include<iostream>
 #include<iomanip>
@@ -44,7 +49,7 @@ void VkRenderer::InitWindow()
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	// Store a handle to our window in our class
-	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr); 
+	_window = glfwCreateWindow(WIDTH, HEIGHT, "VkLearn", nullptr, nullptr);
 
 	glfwSetWindowUserPointer(_window, this); // Allows us to set the owner instance class for this window
 
@@ -61,11 +66,13 @@ void VkRenderer::InitVulkan()
 	CreateSwapChain();
 	CreateImageViews();
 	CreateRenderPass();
+	CreateDescriptorSetLayout();
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
 	CreateVertexBuffer();
 	CreateIndexBuffer();
+	CreateUniformBuffers();
 	CreateCommandBuffers();
 	CreateSyncObjects();
 }
@@ -85,7 +92,7 @@ void VkRenderer::DrawFrame()
 {
 	///Wait for the previous frame to finish
 	vkWaitForFences(_device, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
-	
+
 
 	///Acquire an image from the swap chain
 	uint32_t imageIndex; // The index refers to the VkImage in our _swapChainImages array
@@ -106,6 +113,9 @@ void VkRenderer::DrawFrame()
 	//First, we call vkResetCommandBuffer on the command buffer to make sure it is able to be recorded.
 	vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
 	RecordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
+
+	// Update our MVP matrices
+	UpdateUniformBuffer(_currentFrame);
 
 	//Submit the recorded command buffer
 	VkSubmitInfo submitInfo{};
@@ -193,7 +203,7 @@ bool VkRenderer::IsDeviceSuitable(VkPhysicalDevice device)
 	}
 
 	// Pick your dedicated GPU
-	return indices.AllFamiliesAvailable() && extensionsSupported  && swapChainAdequate && deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+	return indices.AllFamiliesAvailable() && extensionsSupported && swapChainAdequate && deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 }
 
 bool VkRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
@@ -250,7 +260,7 @@ void VkRenderer::PickPhysicalDevice()
 	vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
 
 	//If there are 0 devices with Vulkan support then there is no point going further.
-	if (deviceCount == 0) 
+	if (deviceCount == 0)
 	{
 		throw std::runtime_error("failed to find GPUs with Vulkan support!");
 	}
@@ -259,16 +269,16 @@ void VkRenderer::PickPhysicalDevice()
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 
-	for (const auto& device : devices) 
+	for (const auto& device : devices)
 	{
-		if (IsDeviceSuitable(device)) 
+		if (IsDeviceSuitable(device))
 		{
 			_physicalDevice = device;
 			break;
 		}
 	}
 
-	if (_physicalDevice == VK_NULL_HANDLE) 
+	if (_physicalDevice == VK_NULL_HANDLE)
 	{
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
@@ -303,7 +313,7 @@ void VkRenderer::CreateLogicalDevice()
 
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(_deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = _deviceExtensions.data();
-	
+
 	VK_CHECK_RESULT(vkCreateDevice(_physicalDevice, &createInfo, nullptr, &_device), "create logical device");
 
 	// Get handles to queues we need
@@ -436,8 +446,8 @@ void VkRenderer::CreateSwapChain()
 	QueueFamilyIndices indices = FindQueueFamilies(_physicalDevice);
 	uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 	/*
-    VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family. This option offers the best performance.
-    VK_SHARING_MODE_CONCURRENT: Images can be used across multiple queue families without explicit ownership transfers.
+	VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family. This option offers the best performance.
+	VK_SHARING_MODE_CONCURRENT: Images can be used across multiple queue families without explicit ownership transfers.
 	*/
 	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -456,7 +466,7 @@ void VkRenderer::CreateSwapChain()
 	createInfo.clipped = VK_TRUE; // If the clipped member is set to VK_TRUE then that means that we don't care about the color of pixels that are obscured, for example because another window is in front of them
 	createInfo.oldSwapchain = VK_NULL_HANDLE; // Will be used when we get to resizing the window
 
-	VK_CHECK_RESULT(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain),"create swapchain");
+	VK_CHECK_RESULT(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapChain), "create swapchain");
 
 	_swapChainDeletionStack.AddDeletor([&]
 		{
@@ -480,7 +490,7 @@ SwapChainSupportDetails VkRenderer::QuerySwapChainSupport(VkPhysicalDevice devic
 
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, nullptr);
-	if(formatCount != 0)
+	if (formatCount != 0)
 	{
 		swapchainSupportDetails.formats.resize(formatCount);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &formatCount, swapchainSupportDetails.formats.data());
@@ -525,11 +535,11 @@ VkExtent2D VkRenderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
 	// if the extent is the special value, (0xFFFFFFFF, 0xFFFFFFFF), the surface size
 	// can be determined by the extent of the swapchain targeting this surface,
 	// else it must stay the same value as the current extent
-	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) 
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 	{
 		return capabilities.currentExtent;
 	}
-	else 
+	else
 	{
 		// The surface current extent is the special value, we need to calculate the 
 		// required swapchain extent
@@ -557,7 +567,7 @@ void VkRenderer::CreateImageViews()
 	_swapChainImageViews.resize(_swapChainImages.size());
 
 	// Each image needs a corresponding  image view, so use a normal for loop to keep track of the index
-	for (size_t i = 0; i < _swapChainImages.size(); i++) 
+	for (size_t i = 0; i < _swapChainImages.size(); i++)
 	{
 		VkImageViewCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -577,15 +587,15 @@ void VkRenderer::CreateImageViews()
 		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Use as a colour target
 		createInfo.subresourceRange.baseMipLevel = 0; // base mip level is just the first level.
 		createInfo.subresourceRange.levelCount = 1; // Only one level (no mipmap)
-		createInfo.subresourceRange.baseArrayLayer = 0; 
+		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1; // We don't need any layers to this texture
 		// If you were working on a stereographic 3D application, then you would create a swap chain with multiple layers. You could then create multiple image views for each image representing the views for the left and right eyes by accessing different layers.
 
-		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: "+i);
+		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: " + i);
 
 		_swapChainDeletionStack.AddDeletor([=]
-			{ 
-				vkDestroyImageView(_device, _swapChainImageViews[i], nullptr); 
+			{
+				vkDestroyImageView(_device, _swapChainImageViews[i], nullptr);
 			}
 		);
 	}
@@ -637,9 +647,9 @@ void VkRenderer::CreateRenderPass()
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	VK_CHECK_RESULT(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass),"create render pass");
+	VK_CHECK_RESULT(vkCreateRenderPass(_device, &renderPassInfo, nullptr, &_renderPass), "create render pass");
 
-	_mainDeletionStack.AddDeletor([&] 
+	_mainDeletionStack.AddDeletor([&]
 		{
 			vkDestroyRenderPass(_device, _renderPass, nullptr);
 		}
@@ -680,9 +690,9 @@ void VkRenderer::CreateGraphicsPipeline()
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data();
-	
+
 	//Vertex input
-	
+
 	auto bindingDescription = Vertex::GetBindingDescription();
 	auto attributeDescriptions = Vertex::GetAttributeDescriptions();
 
@@ -704,7 +714,7 @@ void VkRenderer::CreateGraphicsPipeline()
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
 	// Remember that the size of the swap chain and its images may differ from the WIDTH and HEIGHT of the window. 
-	viewport.width = (float)_swapChainExtent.width; 
+	viewport.width = (float)_swapChainExtent.width;
 	viewport.height = (float)_swapChainExtent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
@@ -720,7 +730,7 @@ void VkRenderer::CreateGraphicsPipeline()
 	viewportState.pViewports = &viewport;
 	viewportState.scissorCount = 1;
 	viewportState.pScissors = &scissor;
-	
+
 	//Rasterizer
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -734,7 +744,7 @@ void VkRenderer::CreateGraphicsPipeline()
 	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
 	rasterizer.depthBiasClamp = 0.0f; // Optional
 	rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
-	
+
 	//Multisampling
 	// MSAA is an efficient anti-aliasing method. We don't need it for now so leave everything default
 	VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -745,10 +755,10 @@ void VkRenderer::CreateGraphicsPipeline()
 	multisampling.pSampleMask = nullptr; // Optional
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
-	
+
 	//Depth and stencil testing
 	// TODO
-	
+
 	//Color blending
 	// We won't be using any color blending so both of these structs are set to default with blending disabled
 	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
@@ -827,7 +837,7 @@ VkShaderModule VkRenderer::CreateShaderModule(const std::vector<char>& code)
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	createInfo.codeSize = code.size();
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data()); // We need a reinterpret_cast here because we are casting between pointer types
-	
+
 	VkShaderModule shaderModule;
 	VK_CHECK_RESULT(vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule), "create shader module");
 
@@ -862,7 +872,7 @@ void VkRenderer::CreateFramebuffers()
 	}
 }
 
-uint32_t VkRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) 
+uint32_t VkRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
@@ -902,7 +912,7 @@ void VkRenderer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMem
 	vkBindBufferMemory(_device, buffer, bufferMemory, 0);
 }
 
-void VkRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) 
+void VkRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -934,7 +944,7 @@ void VkRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize
 
 	vkQueueSubmit(_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 	vkQueueWaitIdle(_graphicsQueue); // Just wait on the queue since we want to make sure the copy has happened before returning
-	 
+
 	vkFreeCommandBuffers(_device, _commandPool, 1, &commandBuffer);
 }
 
@@ -981,7 +991,7 @@ void VkRenderer::CreateIndexBuffer() {
 	_mainDeletionStack.AddDeletor([&] {
 		vkDestroyBuffer(_device, _indexBuffer, nullptr);
 		vkFreeMemory(_device, _indexBufferMemory, nullptr);
-	});
+		});
 
 	CopyBuffer(stagingBuffer, _indexBuffer, bufferSize);
 
@@ -1027,8 +1037,8 @@ void VkRenderer::CreateCommandBuffers()
 
 	/*The level parameter specifies if the allocated command buffers are primary or secondary command buffers.
 
-    VK_COMMAND_BUFFER_LEVEL_PRIMARY: Can be submitted to a queue for execution, but cannot be called from other command buffers.
-    VK_COMMAND_BUFFER_LEVEL_SECONDARY: Cannot be submitted directly, but can be called from primary command buffers.
+	VK_COMMAND_BUFFER_LEVEL_PRIMARY: Can be submitted to a queue for execution, but cannot be called from other command buffers.
+	VK_COMMAND_BUFFER_LEVEL_SECONDARY: Cannot be submitted directly, but can be called from primary command buffers.
 	*/
 
 	VK_CHECK_RESULT(vkAllocateCommandBuffers(_device, &allocInfo, _commandBuffers.data()), "allocate command buffers");
@@ -1113,6 +1123,69 @@ void VkRenderer::CreateSyncObjects()
 			}
 		);
 	}
+}
+
+void VkRenderer::CreateDescriptorSetLayout()
+{
+	VkDescriptorSetLayoutBinding uboLayoutBinding{};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount = 1;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.pImmutableSamplers = nullptr; // Default value for now (Optional)
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &uboLayoutBinding;
+
+	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &_descriptorSetLayout), "create descriptor set layout");
+
+	_mainDeletionStack.AddDeletor([&] {
+		vkDestroyDescriptorSetLayout(_device, _descriptorSetLayout, nullptr);
+		});
+
+}
+
+void VkRenderer::CreateUniformBuffers()
+{
+	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+	_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+	_uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+	_uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _uniformBuffers[i], _uniformBuffersMemory[i]);
+
+		vkMapMemory(_device, _uniformBuffersMemory[i], 0, bufferSize, 0, &_uniformBuffersMapped[i]);
+	}
+
+	_mainDeletionStack.AddDeletor([&] {
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			vkDestroyBuffer(_device, _uniformBuffers[i], nullptr);
+			vkFreeMemory(_device, _uniformBuffersMemory[i], nullptr);
+		}
+		});
+}
+
+void VkRenderer::UpdateUniformBuffer(uint32_t currentImage)
+{
+	static auto startTime = std::chrono::high_resolution_clock::now();
+
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+	UniformBufferObject ubo{};
+	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.0f);
+
+	ubo.proj[1][1] *= -1;
+
+	memcpy(_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
 void VkRenderer::PrintDebugInfo() const

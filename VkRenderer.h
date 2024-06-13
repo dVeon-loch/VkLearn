@@ -60,6 +60,12 @@ struct Vertex
 	}
 };
 
+struct UniformBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
+};
+
 struct QueueFamilyIndices {
 	std::optional<uint32_t> graphicsFamily;
 	std::optional<uint32_t> presentFamily;
@@ -150,6 +156,12 @@ private:
 	std::vector<VkImageView> _swapChainImageViews;
 
 	std::vector<VkFramebuffer> _swapChainFramebuffers;
+
+	VkDescriptorSetLayout _descriptorSetLayout;
+
+	std::vector<VkBuffer> _uniformBuffers;
+	std::vector<VkDeviceMemory> _uniformBuffersMemory;
+	std::vector<void*> _uniformBuffersMapped;
 
 	VkPipelineLayout _pipelineLayout;
 	VkRenderPass _renderPass;
@@ -267,6 +279,12 @@ private:
 	void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 	void CreateSyncObjects();
+
+	void CreateDescriptorSetLayout();
+
+	void CreateUniformBuffers();
+
+	void UpdateUniformBuffer(uint32_t currentImage);
 
 	/// @brief Prints out assorted info that might be useful when debugging the renderer
 	void PrintDebugInfo() const;
