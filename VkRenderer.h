@@ -200,6 +200,8 @@ private:
 
 	VkImage _textureImage;
 	VkDeviceMemory _textureImageMemory;
+	VkImageView _textureImageView;
+	VkSampler _textureSampler;
 
 public:
 	/// @brief Public method that consumers of this renderer require to run the render loop
@@ -290,6 +292,10 @@ private:
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	void CreateTextureImage();
+
+	void CreateTextureImageView();
+
+	void CreateTextureSampler();
 
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
