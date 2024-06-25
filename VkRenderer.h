@@ -61,9 +61,9 @@ struct Vertex
 };
 
 struct UniformBufferObject {
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
+	alignas(16) glm::mat4 model;
+	alignas(16) glm::mat4 view;
+	alignas(16) glm::mat4 proj;
 };
 
 struct QueueFamilyIndices {
@@ -198,6 +198,9 @@ private:
 		2 , 3 , 0
 	};
 
+	VkImage _textureImage;
+	VkDeviceMemory _textureImageMemory;
+
 public:
 	/// @brief Public method that consumers of this renderer require to run the render loop
 	void run() {
@@ -279,6 +282,18 @@ private:
 	void CreateCommandBuffers();
 
 	void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+	void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+
+	VkCommandBuffer BeginSingleTimeCommands();
+
+	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+	void CreateTextureImage();
+
+	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
 	void CreateSyncObjects();
 
