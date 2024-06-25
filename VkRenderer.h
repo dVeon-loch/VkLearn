@@ -24,6 +24,7 @@ struct Vertex
 {
 	glm::vec2 pos;
 	glm::vec3 colour;
+	glm::vec2 texCoord;
 
 	// A vertex binding describes at which rate to load data from memory throughout the vertices. It specifies the number of bytes between data entries and whether to move to the next data entry after each vertex or after each instance.
 	static VkVertexInputBindingDescription GetBindingDescription()
@@ -42,9 +43,9 @@ struct Vertex
 	}
 
 	// As the function prototype indicates, there are going to be two of these structures.An attribute description struct describes how to extract a vertex attribute from a chunk of vertex data originating from a binding description.We have two attributes, position and color, so we need two attribute description structs.
-	static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions()
+	static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions()
 	{
-		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
@@ -55,6 +56,11 @@ struct Vertex
 		attributeDescriptions[1].location = 1;
 		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[1].offset = offsetof(Vertex, colour);
+
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
 		return attributeDescriptions;
 	}
@@ -187,10 +193,10 @@ private:
 	VkDeviceMemory _indexBufferMemory;
 
 	const std::vector<Vertex> _vertices = {
-	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // BOTTOM LEFT
-	{{-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}}, // TOP LEFT
-	{{0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}}, // TOP RIGHT
-	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}} // BOTTOM RIGHT
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 
 	const std::vector<uint32_t> _indices = {
