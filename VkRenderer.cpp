@@ -1177,6 +1177,14 @@ void VkRenderer::CreateTextureImage()
 
 	// To be able to start sampling from the texture image in the shader, we need one last transition to prepare it for shader access
 	TransitionImageLayout(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	vkDestroyBuffer(_device, stagingBuffer, nullptr);
+	vkFreeMemory(_device, stagingBufferMemory, nullptr);
+
+	_mainDeletionStack.AddDeletor([&] {
+		vkDestroyImage(_device, _textureImage, nullptr);
+		vkFreeMemory(_device, _textureImageMemory, nullptr);
+		});
 }
 
 void VkRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
