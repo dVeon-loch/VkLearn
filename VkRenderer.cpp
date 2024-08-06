@@ -73,9 +73,9 @@ void VkRenderer::InitVulkan()
 	CreateRenderPass();
 	CreateDescriptorSetLayout();
 	CreateGraphicsPipeline();
-	CreateFramebuffers();
 	CreateCommandPool();
 	CreateDepthResources();
+	CreateFramebuffers();
 	CreateTextureImage();
 	CreateTextureImageView();
 	CreateTextureSampler();
@@ -764,7 +764,17 @@ void VkRenderer::CreateGraphicsPipeline()
 	multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
 	//Depth and stencil testing
-	// TODO
+	VkPipelineDepthStencilStateCreateInfo depthStencil{};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = VK_TRUE;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+	depthStencil.depthBoundsTestEnable = VK_FALSE;
+	depthStencil.minDepthBounds = 0.0f; // Optional
+	depthStencil.maxDepthBounds = 1.0f; // Optional
+	depthStencil.stencilTestEnable = VK_FALSE;
+	depthStencil.front = {}; // Optional
+	depthStencil.back = {}; // Optional
 
 	//Color blending
 	// We won't be using any color blending so both of these structs are set to default with blending disabled
@@ -816,7 +826,7 @@ void VkRenderer::CreateGraphicsPipeline()
 	pipelineInfo.pViewportState = &viewportState;
 	pipelineInfo.pRasterizationState = &rasterizer;
 	pipelineInfo.pMultisampleState = &multisampling;
-	pipelineInfo.pDepthStencilState = nullptr; // Optional
+	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = &dynamicState;
 	pipelineInfo.layout = _pipelineLayout;
@@ -856,15 +866,16 @@ void VkRenderer::CreateFramebuffers()
 	_swapChainFramebuffers.resize(_swapChainImageViews.size()); // One framebuffer per image view/image
 
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-		VkImageView attachments[] = {
-			_swapChainImageViews[i]
+		std::array<VkImageView, 2> attachments = {
+			_swapChainImageViews[i],
+			_depthImageView
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = _renderPass;
-		framebufferInfo.attachmentCount = 1;
-		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width = _swapChainExtent.width;
 		framebufferInfo.height = _swapChainExtent.height;
 		framebufferInfo.layers = 1;
@@ -1043,9 +1054,12 @@ void VkRenderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = _swapChainExtent;
 
-	VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
-	renderPassInfo.clearValueCount = 1;
-	renderPassInfo.pClearValues = &clearColor;
+	std::array<VkClearValue, 2> clearValues{};
+	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+	clearValues[1].depthStencil = { 1.0f, 0 };
+
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
 
 	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1277,13 +1291,23 @@ void VkRenderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLa
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = image;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
 	barrier.srcAccessMask = 0; // TODO
 	barrier.dstAccessMask = 0; // TODO
+
+	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+		if (HasStencilComponent(format)) {
+			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	}
+	else {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	}
 
 	VkPipelineStageFlags sourceStage;
 	VkPipelineStageFlags destinationStage;
@@ -1357,7 +1381,7 @@ void VkRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
 	EndSingleTimeCommands(commandBuffer);
 }
 
-bool HasStencilComponent(VkFormat format) {
+bool VkRenderer::HasStencilComponent(VkFormat format) {
 	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
@@ -1368,6 +1392,11 @@ void VkRenderer::CreateDepthResources()
 	CreateImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory);
 	_depthImageView = CreateImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
+	_mainDeletionStack.AddDeletor([&] {
+		vkDestroyImage(_device, _depthImage, nullptr);
+		vkDestroyImageView(_device, _depthImageView, nullptr);
+		vkFreeMemory(_device, _depthImageMemory, nullptr);
+	});
 	TransitionImageLayout(_depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 

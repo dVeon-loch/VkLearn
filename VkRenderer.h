@@ -318,6 +318,8 @@ private:
 
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+	bool HasStencilComponent(VkFormat format);
+
 	void CreateDepthResources();
 
 	VkFormat FindDepthFormat();
