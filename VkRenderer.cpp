@@ -1,6 +1,7 @@
 #include "VkRenderer.h"
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -74,6 +75,7 @@ void VkRenderer::InitVulkan()
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
+	CreateDepthResources();
 	CreateTextureImage();
 	CreateTextureImageView();
 	CreateTextureSampler();
@@ -582,29 +584,7 @@ void VkRenderer::CreateImageViews()
 	// Each image needs a corresponding  image view, so use a normal for loop to keep track of the index
 	for (size_t i = 0; i < _swapChainImages.size(); i++)
 	{
-		VkImageViewCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		createInfo.image = _swapChainImages[i];
-
-		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // This is going to be a regular 2D texture
-		createInfo.format = _swapChainImageFormat; // The format of the view is the same as the format of the swapchain image
-
-		// Swizzling allows us to swap the channels around, e.g. if we only want the red channel to be kept for some reason
-		// We won't need this for now so just leave everything as 'identity'
-		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-		// The subresourceRange field describes what the image's purpose is and which part of the image should be accessed.
-		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Use as a colour target
-		createInfo.subresourceRange.baseMipLevel = 0; // base mip level is just the first level.
-		createInfo.subresourceRange.levelCount = 1; // Only one level (no mipmap)
-		createInfo.subresourceRange.baseArrayLayer = 0;
-		createInfo.subresourceRange.layerCount = 1; // We don't need any layers to this texture
-		// If you were working on a stereographic 3D application, then you would create a swap chain with multiple layers. You could then create multiple image views for each image representing the views for the left and right eyes by accessing different layers.
-
-		VK_CHECK_RESULT(vkCreateImageView(_device, &createInfo, nullptr, &_swapChainImageViews[i]), "create image view: " + i);
+		_swapChainImageViews[i] = CreateImageView(_swapChainImages[i], _swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
 		_swapChainDeletionStack.AddDeletor([=]
 			{
@@ -1154,6 +1134,26 @@ void VkRenderer::EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
 	vkFreeCommandBuffers(_device, _commandPool, 1, &commandBuffer);
 }
 
+VkImageView VkRenderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
+	VkImageViewCreateInfo viewInfo{};
+	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewInfo.image = image;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.format = format;
+	viewInfo.subresourceRange.aspectMask = aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	VkImageView imageView;
+	if (vkCreateImageView(_device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
+
+	return imageView;
+}
+
 void VkRenderer::CreateTextureImage()
 {
 	int texWidth, texHeight, texChannels;
@@ -1195,20 +1195,7 @@ void VkRenderer::CreateTextureImage()
 
 void VkRenderer::CreateTextureImageView()
 {
-	// TODO abstract this logic into separate function that both "create image view" methods can use
-
-	VkImageViewCreateInfo viewInfo{};
-	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	viewInfo.image = _textureImage;
-	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	viewInfo.subresourceRange.baseMipLevel = 0;
-	viewInfo.subresourceRange.levelCount = 1;
-	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount = 1;
-
-	VK_CHECK_RESULT(vkCreateImageView(_device, &viewInfo, nullptr, &_textureImageView), "create texture image view");
+	_textureImageView = CreateImageView(_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	_mainDeletionStack.AddDeletor([&] {
 		vkDestroyImageView(_device, _textureImageView, nullptr);
@@ -1347,6 +1334,48 @@ void VkRenderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
 	);
 
 	EndSingleTimeCommands(commandBuffer);
+}
+
+bool HasStencilComponent(VkFormat format) {
+	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+void VkRenderer::CreateDepthResources()
+{
+	VkFormat depthFormat = FindDepthFormat();
+
+	CreateImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _depthImage, _depthImageMemory);
+	_depthImageView = CreateImageView(_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+}
+
+VkFormat VkRenderer::FindDepthFormat() {
+	return FindSupportedFormat(
+		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+	);
+}
+
+VkFormat VkRenderer::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+{
+	/*
+	The VkFormatProperties struct contains three fields:
+
+    linearTilingFeatures: Use cases that are supported with linear tiling
+    optimalTilingFeatures: Use cases that are supported with optimal tiling
+    bufferFeatures: Use cases that are supported for buffers
+	*/
+	for (VkFormat format : candidates) {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &props);
+		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+			return format;
+		}
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+	}
+	throw std::runtime_error("failed to find supported format!");
 }
 
 void VkRenderer::CreateSyncObjects()

@@ -214,6 +214,10 @@ private:
 	VkImageView _textureImageView;
 	VkSampler _textureSampler;
 
+	VkImage _depthImage;
+	VkDeviceMemory _depthImageMemory;
+	VkImageView _depthImageView;
+
 public:
 	/// @brief Public method that consumers of this renderer require to run the render loop
 	void run() {
@@ -302,6 +306,8 @@ private:
 
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
+	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
 	void CreateTextureImage();
 
 	void CreateTextureImageView();
@@ -311,6 +317,12 @@ private:
 	void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+	void CreateDepthResources();
+
+	VkFormat FindDepthFormat();
+
+	VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
 	void CreateSyncObjects();
 
