@@ -124,6 +124,10 @@ private:
 
 	static constexpr uint32_t HEIGHT = 600;
 
+	const std::string MODEL_PATH = "resources/models/viking_room.obj";
+	const std::string TEXTURE_PATH = "textures/viking_room.png";
+
+
 	static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 	const std::vector<std::string> _validationLayers = {
@@ -192,22 +196,9 @@ private:
 	VkBuffer _indexBuffer;
 	VkDeviceMemory _indexBufferMemory;
 
-	const std::vector<Vertex> _vertices = {
-	{{-0.5f, -0.5f, 0.f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	{{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+	std::vector<Vertex> _vertices;
 
-	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-	};
-
-	const std::vector<uint32_t> _indices = {
-		0 , 1 , 2, 2 , 3 , 0, // Square 1
-		4, 5, 6, 6, 7, 4 // Square 2
-	};
+	std::vector<uint32_t> _indices;
 
 	VkImage _textureImage;
 	VkDeviceMemory _textureImageMemory;
@@ -337,6 +328,8 @@ private:
 	void CreateDescriptorSets();
 
 	void UpdateUniformBuffer(uint32_t currentImage);
+
+	void LoadModel();
 
 	/// @brief Prints out assorted info that might be useful when debugging the renderer
 	void PrintDebugInfo() const;

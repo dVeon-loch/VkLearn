@@ -9,6 +9,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 #include <chrono>
 #include<cstring>
 #include<iostream>
@@ -79,6 +82,7 @@ void VkRenderer::InitVulkan()
 	CreateTextureImage();
 	CreateTextureImageView();
 	CreateTextureSampler();
+	LoadModel();
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateUniformBuffers();
@@ -1185,7 +1189,7 @@ VkImageView VkRenderer::CreateImageView(VkImage image, VkFormat format, VkImageA
 void VkRenderer::CreateTextureImage()
 {
 	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load("textures/brick-subsea.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 	if (!pixels) {
@@ -1243,11 +1247,11 @@ void VkRenderer::CreateTextureSampler()
 
 	// Sampler repeat modes explanation
 	/*
-    VK_SAMPLER_ADDRESS_MODE_REPEAT: Repeat the texture when going beyond the image dimensions.
-    VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT: Like repeat, but inverts the coordinates to mirror the image when going beyond the dimensions.
-    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: Take the color of the edge closest to the coordinate beyond the image dimensions.
-    VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: Like clamp to edge, but instead uses the edge opposite to the closest edge.
-    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: Return a solid color when sampling beyond the dimensions of the image.
+	VK_SAMPLER_ADDRESS_MODE_REPEAT: Repeat the texture when going beyond the image dimensions.
+	VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT: Like repeat, but inverts the coordinates to mirror the image when going beyond the dimensions.
+	VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: Take the color of the edge closest to the coordinate beyond the image dimensions.
+	VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: Like clamp to edge, but instead uses the edge opposite to the closest edge.
+	VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: Return a solid color when sampling beyond the dimensions of the image.
 	*/
 
 	samplerInfo.anisotropyEnable = VK_TRUE;
@@ -1396,7 +1400,7 @@ void VkRenderer::CreateDepthResources()
 		vkDestroyImage(_device, _depthImage, nullptr);
 		vkDestroyImageView(_device, _depthImageView, nullptr);
 		vkFreeMemory(_device, _depthImageMemory, nullptr);
-	});
+		});
 	TransitionImageLayout(_depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
@@ -1413,9 +1417,9 @@ VkFormat VkRenderer::FindSupportedFormat(const std::vector<VkFormat>& candidates
 	/*
 	The VkFormatProperties struct contains three fields:
 
-    linearTilingFeatures: Use cases that are supported with linear tiling
-    optimalTilingFeatures: Use cases that are supported with optimal tiling
-    bufferFeatures: Use cases that are supported for buffers
+	linearTilingFeatures: Use cases that are supported with linear tiling
+	optimalTilingFeatures: Use cases that are supported with optimal tiling
+	bufferFeatures: Use cases that are supported for buffers
 	*/
 	for (VkFormat format : candidates) {
 		VkFormatProperties props;
@@ -1575,6 +1579,40 @@ void VkRenderer::CreateDescriptorSets()
 		descriptorWrites[1].pImageInfo = &imageInfo;
 
 		vkUpdateDescriptorSets(_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	}
+}
+
+void VkRenderer::LoadModel()
+{
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+		throw std::runtime_error(warn + err);
+	}
+
+	for (const auto& shape : shapes) {
+		for (const auto& index : shape.mesh.indices) {
+			Vertex vertex{};
+
+			vertex.pos = {
+			attrib.vertices[3 * index.vertex_index + 0],
+			attrib.vertices[3 * index.vertex_index + 1],
+			attrib.vertices[3 * index.vertex_index + 2]
+			};
+
+			vertex.texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			vertex.colour = { 1.0f, 1.0f, 1.0f };
+
+			_vertices.push_back(vertex);
+			_indices.push_back(_indices.size());
+		}
 	}
 }
 
